@@ -14,11 +14,9 @@ public class StartGame extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pantalla_juego);
-    }
-
-    public void startGame(View view) {
 
         GameView gameView = new GameView(this);
         setContentView(gameView);
     }
+
 }

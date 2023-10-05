@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">ArkanoidLite</string>
+    <string name="btn_start_game">Start Game</string>
+    <string name="btn_settings">Settings</string>
+    <string name="btn_infinite_mode">Infinite Mode</string>
+    <string name="btn_level">Level</string>
+    <string name="btn_sound">Sound</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_exit">Exit</string>
 </resources>

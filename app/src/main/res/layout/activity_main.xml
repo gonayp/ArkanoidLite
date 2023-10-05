@@ -9,28 +9,89 @@
     android:background="#E1F5FE"
     android:gravity="center">
 
-    <androidx.appcompat.widget.LinearLayoutCompat
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:onClick="onActionStartGame"
+        android:background="@drawable/buttonshape"
+        android:gravity="center">
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:src="@drawable/play"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
+        android:paddingStart="45dp"
+        android:paddingEnd="25dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="@string/btn_start_game" />
+
+
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_centerVertical="true"
+        android:paddingTop="15dp"
+        android:paddingBottom="15dp"
+        android:textSize="14sp"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="@string/btn_start_game" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:onClick="onActionSettings"
+        android:background="@drawable/buttonshape"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:src="@drawable/settings"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:paddingStart="45dp"
+            android:paddingEnd="25dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/btn_settings" />
+
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:background="@drawable/play"
-            android:onClick="startGame"/>
+            android:layout_centerVertical="true"
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp"
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="@string/btn_settings" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:id="@+id/ibAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:background="@drawable/audio_on"
-            android:onClick="audioPref"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-    </androidx.appcompat.widget.LinearLayoutCompat>
 
 
 

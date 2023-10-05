@@ -41,7 +41,7 @@ public class GameView extends View {
     Paint textPaint = new Paint();
     Paint healthPaint = new Paint();
 
-    float TEXT_SIZE = 120;
+    float TEXT_SIZE = 80;
     float oldX;
     int points = 0;
     int life = 3;
@@ -60,6 +60,10 @@ public class GameView extends View {
 
     List<Brick> bricks = new ArrayList<Brick>();
 
+    int dificultad = 1;
+
+    boolean modoInfinito = true;
+
     public GameView(Context context) {
         super(context);
         this.context = context;
@@ -72,14 +76,20 @@ public class GameView extends View {
         textPaint.setTextAlign(Paint.Align.LEFT);
         healthPaint.setColor(Color.GREEN);
 
+        //Asignar audio y otras configuraciones segun preferencias
+        sharedPreferences = context.getSharedPreferences("my_pref", 0);
+        audioState = sharedPreferences.getBoolean("audioState", true);
+        modoInfinito = sharedPreferences.getBoolean("infiniteModeState", false);
+        dificultad = sharedPreferences.getInt("levelState",1);
+        if(modoInfinito) dificultad = 1;
+        bricksCount += bricksCount*dificultad;
+
         //Sacar el tamaño de la pantalla
         Display display = ((Activity) getContext()).getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
         dWidth = size.x;
         dHeight = size.y;
-
-
 
         //Inicializar paddle
         Bitmap paddle_ = BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
@@ -92,15 +102,11 @@ public class GameView extends View {
         random = new Random();
         Bitmap ball_ = BitmapFactory.decodeResource(getResources(),R.drawable.ball);
         ball = new Ball(posicionInicialX + paddle.getPaddleWidth() / 3,
-                paddle.getPaddleY() - paddle.getPaddleHeight() - ball_.getHeight()/3,
+                paddle.getPaddleY() - paddle.getPaddleHeight() ,
                 ball_);
 
         //Inicializar bricks
         crearBricks();
-
-        //Asignar audio segun preferencias
-        sharedPreferences = context.getSharedPreferences("my_pref", 0);
-        audioState = sharedPreferences.getBoolean("audioState", true);
 
 
         handler = new Handler();
@@ -132,7 +138,7 @@ public class GameView extends View {
                 canvas.drawBitmap(brick.getBrick(), brick.getBrickX(), brick.getBrickY(), null);
             }
         }
-        canvas.drawText("Puntos: "+points, 20, TEXT_SIZE, textPaint);
+        canvas.drawText("Puntos: "+points, 20,dHeight-TEXT_SIZE, textPaint);
 
         if(life == 2){
             healthPaint.setColor(Color.YELLOW);
@@ -141,7 +147,7 @@ public class GameView extends View {
         }
 
         //Pintar las barra superior segun la vida que quede
-        canvas.drawRect(dWidth-200, 30, dWidth -200 + 60 * life, 80, healthPaint);
+        canvas.drawRect(dWidth-200, dHeight-TEXT_SIZE, dWidth -200 + 60 * life,dHeight , healthPaint);
 
         //Rellamar al metodo onDraw para hacer el bucle de juego
         handler.postDelayed(runnable, UPDATE_MILLIS);
@@ -184,16 +190,26 @@ public class GameView extends View {
 
     private void crearBricks() {
         for (int i= 0; i < bricksCount; i++) {
-            Bitmap brick_ = BitmapFactory.decodeResource(getResources(), R.drawable.brick_grass01);
-            int x = random.nextInt(dWidth)+2;
-            int calculo = (int) (paddle.getPaddleY()-(3*ball.getBallHeight()));
-            int y = random.nextInt(calculo);
-            while(colicionesEntreBricks(x, y, brick_.getWidth(), brick_.getHeight())) {
-                x = random.nextInt(dWidth)+2;
-                y = random.nextInt(calculo);
-            }
-            bricks.add(new Brick(x, y, brick_));
+            crearNewBrick();
         }
+    }
+
+    private void crearNewBrick() {
+        int tipoBrick = calcularTipoBrickAleatorioSegunDificultad();
+        Bitmap brick_ = seleccionarBitmapSegunTipoBrick(tipoBrick);
+        int x = random.nextInt(dWidth)+2;
+        int calculo = (int) (paddle.getPaddleY() -( dHeight -paddle.getPaddleY()));
+        int y = random.nextInt(calculo);
+        while(colicionesEntreBricks(x, y, brick_.getWidth(), brick_.getHeight())) {
+            x = random.nextInt(dWidth)+2;
+            y = random.nextInt(calculo);
+        }
+        bricks.add(new Brick(x, y, brick_,tipoBrick,tipoBrick,0));
+    }
+
+
+    private int calcularTipoBrickAleatorioSegunDificultad() {
+        return random.nextInt(dificultad)+1;
     }
 
     /**
@@ -220,6 +236,7 @@ public class GameView extends View {
     }
 
     private void comprobarColisionesBricks() {
+        boolean bloqueDestruido = false;
 
         //casos de contacto con un brick
         for (Brick brick : bricks) {
@@ -232,9 +249,11 @@ public class GameView extends View {
                         mpHit.start();
                     }
                     brick.reduceLife();
+                    cambiarBitmapBrick(brick);
                     if (brick.getLife() == 0) {//Suma puntos solo si destruye el bloque
-                        points++;
+                        sumarPuntos(brick.getType());
                         bricksCount--;
+                        bloqueDestruido = true;
                     }
                     velocity.setX(velocity.getX() + aceleration/2);
                     velocity.setY((velocity.getY() + aceleration/2) * -1);
@@ -243,7 +262,54 @@ public class GameView extends View {
             }
         }
 
+        if(bloqueDestruido){
+            crearBrickModoInfinito();
+        }
+
     }
+
+    private void cambiarBitmapBrick(Brick brick) {
+        switch (brick.getType()){
+            case 2:
+                if(brick.getLife() <= brick.getType()/2)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_sand02));
+                break;
+            case 3:
+                if(brick.getLife() == 2)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt02));
+                if(brick.getLife() == 1)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt03));
+                break;
+            case 4:
+                if(brick.getLife() <= brick.getType()/2)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_hard02));
+                break;
+            case 5:
+                if(brick.getLife() == 3)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice02));
+                if(brick.getLife() == 1)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice03));
+                break;
+            case 6:
+                if(brick.getLife() <= brick.getType()/2)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_rock02));
+                break;
+            case 7:
+                if(brick.getLife() == 5)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco02));
+                if(brick.getLife() == 2)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco03));
+                break;
+            case 8:
+                if(brick.getLife() == 6)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal02));
+                if(brick.getLife() == 3)
+                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal03));
+                break;
+
+        }
+    }
+
 
     private void comprobarColisionesInferiores() {
         //si la pelota cae abajo y no choca con la pala
@@ -289,13 +355,68 @@ public class GameView extends View {
     }
 
     private void comprobarColisionesLaterales() {
-        if(ball.getBallX() >= dWidth -ball.getBallWidth() || ball.getBallX() <= 0){//si la pelota rebota de los lados
+        if(ball.getBallX() + ball.getBallWidth() >= dWidth -ball.getBallWidth() || ball.getBallX() <= 0){//si la pelota rebota de los lados
             velocity.setX(velocity.getX()*-1);//cambiar direccion de la pelota
         }
-        if(ball.getBallY() <= 0){//Si la pelota rebota arriba
+        if(ball.getBallY() + ball.getBallHeight() <= 0){//Si la pelota rebota arriba
             velocity.setY(velocity.getY() *-1);//cambiar direccion de la pelota
         }
     }
+
+    private void sumarPuntos(int tipo_brick) {
+        points += tipo_brick;
+        if(modoInfinito){
+            calcularDificultad();
+        }
+    }
+
+    private void calcularDificultad() {
+        if(points > 10) dificultad = 1;
+        if(points > 20) dificultad = 2;
+        if(points > 40) dificultad = 3;
+        if(points > 60) dificultad = 4;
+        if(points > 100) dificultad = 5;
+    }
+
+    private void crearBrickModoInfinito() {
+        if(modoInfinito){
+            crearNewBrick();
+            bricksCount++;
+            if(dificultad > 5) {
+                crearNewBrick();
+                bricksCount++;
+                if(dificultad > 7){
+                    crearBricks();
+                    bricksCount++;
+                }
+            }
+        }
+    }
+
+    private Bitmap seleccionarBitmapSegunTipoBrick(int p_tipoBrick) {
+        switch (p_tipoBrick){
+            case 1:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_box_01);
+            case 2:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_sand01);
+            case 3:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt01);
+            case 4:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_hard01);
+            case 5:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice01);
+            case 6:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_rock01);
+            case 7:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco01);
+            case 8:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal01);
+            default:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_box_01);
+        }
+
+    }
+
 
     //Metodo para devolver uno de los posibles resultados de velocidad
     private int xVelocity() {
