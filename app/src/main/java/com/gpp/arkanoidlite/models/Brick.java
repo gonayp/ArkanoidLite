@@ -13,6 +13,8 @@ public class Brick {
 
     int item;
 
+    int bloqueo;
+
     public Brick(float brickX, float brickY, Bitmap brick, int type, int life, int item ) {
         this.brickX = brickX;
         this.brickY = brickY;
@@ -20,6 +22,7 @@ public class Brick {
         this.type = type;
         this.life = life;
         this.item = item;
+        bloqueo = 0;
     }
 
     public Brick(float brickX, float brickY, Bitmap brick) {
@@ -29,6 +32,7 @@ public class Brick {
         this.type = 1;
         this.life = 1;
         this.item = 0;
+        bloqueo = 0;
     }
 
     public float getBrickX() {
@@ -89,5 +93,18 @@ public class Brick {
 
     public int getBrickHeight() {
         return brick.getHeight();
+    }
+
+    public void bloquear(){
+        bloqueo = 5;
+    }
+
+    public void desbloquear(){
+        if(bloqueo > 0)
+            bloqueo--;
+    }
+
+    public boolean bloqueado(){
+        return (bloqueo > 0);
     }
 }

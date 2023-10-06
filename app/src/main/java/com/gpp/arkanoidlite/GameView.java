@@ -19,6 +19,7 @@ import android.view.View;
 import com.gpp.arkanoidlite.activities.GameOver;
 import com.gpp.arkanoidlite.models.Ball;
 import com.gpp.arkanoidlite.models.Brick;
+import com.gpp.arkanoidlite.models.Item;
 import com.gpp.arkanoidlite.models.Paddle;
 import com.gpp.arkanoidlite.models.Velocity;
 
@@ -59,10 +60,13 @@ public class GameView extends View {
     int posicionInicialX, posicionInicialY;
 
     List<Brick> bricks = new ArrayList<Brick>();
+    List<Item> items = new ArrayList<Item>();
 
     int dificultad = 1;
 
     boolean modoInfinito = true;
+
+
 
     public GameView(Context context) {
         super(context);
@@ -79,7 +83,7 @@ public class GameView extends View {
         //Asignar audio y otras configuraciones segun preferencias
         sharedPreferences = context.getSharedPreferences("my_pref", 0);
         audioState = sharedPreferences.getBoolean("audioState", true);
-        modoInfinito = sharedPreferences.getBoolean("infiniteModeState", false);
+        modoInfinito = sharedPreferences.getBoolean("infiniteModeState", true);
         dificultad = sharedPreferences.getInt("levelState",1);
         if(modoInfinito) dificultad = 1;
         bricksCount += bricksCount*dificultad;
@@ -125,12 +129,18 @@ public class GameView extends View {
         //Añadir componente de velocidad a la pelota
         ball.incrementarX(velocity.getX());
         ball.incrementarY(velocity.getY());
+        //Añadir componente de velocidad a los items en pantalla
+        for (Item item : items) {
+            item.incrementarY(10);
+        }
         //Comprobar coliciones
         comprobarColisionesLaterales();
         comprobarColisionesInferiores();
         comprobarColisionesBricks();
+        comprobarColisionesItem();
 
         //Pintar elementos
+        //canvas.drawBitmap(BitmapFactory.decodeResource(getResources(),R.drawable.restart), dWidth, dHeight, null);
         canvas.drawBitmap(ball.getBall(), ball.getBallX(), ball.getBallY(), null);
         canvas.drawBitmap(paddle.getPaddle(), paddle.getPaddleX(),paddle.getPaddleY(), null);
         for (Brick brick : bricks) {
@@ -138,15 +148,20 @@ public class GameView extends View {
                 canvas.drawBitmap(brick.getBrick(), brick.getBrickX(), brick.getBrickY(), null);
             }
         }
+        for (Item item : items) {
+            canvas.drawBitmap(item.getItem(), item.getItemX(), item.getItemY(), null);
+        }
         canvas.drawText("Puntos: "+points, 20,dHeight-TEXT_SIZE, textPaint);
 
         if(life == 2){
             healthPaint.setColor(Color.YELLOW);
         }else if(life == 1){
             healthPaint.setColor(Color.RED);
+        }else{
+            healthPaint.setColor(Color.GREEN);
         }
 
-        //Pintar las barra superior segun la vida que quede
+        //Pintar las barra inferior segun la vida que quede
         canvas.drawRect(dWidth-200, dHeight-TEXT_SIZE, dWidth -200 + 60 * life,dHeight , healthPaint);
 
         //Rellamar al metodo onDraw para hacer el bucle de juego
@@ -154,6 +169,7 @@ public class GameView extends View {
 
 
     }
+
 
 
 
@@ -204,8 +220,10 @@ public class GameView extends View {
             x = random.nextInt(dWidth)+2;
             y = random.nextInt(calculo);
         }
-        bricks.add(new Brick(x, y, brick_,tipoBrick,tipoBrick,0));
+        bricks.add(new Brick(x, y, brick_,tipoBrick,tipoBrick,calcularItemAleatorio()));
     }
+
+
 
 
     private int calcularTipoBrickAleatorioSegunDificultad() {
@@ -240,7 +258,8 @@ public class GameView extends View {
 
         //casos de contacto con un brick
         for (Brick brick : bricks) {
-            if(brick.getLife() > 0) {//Solo comprueba colision con bloques vivos
+            brick.desbloquear();
+            if(brick.getLife() > 0 && !brick.bloqueado()) {//Solo comprueba colision con bloques vivos y no bloqueados
                 if (((ball.getBallX() + ball.getBallWidth()) >= brick.getBrickX())
                         && (ball.getBallX() <= brick.getBrickX() + brick.getBrickWidth())
                         && (ball.getBallY() + ball.getBallHeight() >= brick.getBrickY())
@@ -249,14 +268,49 @@ public class GameView extends View {
                         mpHit.start();
                     }
                     brick.reduceLife();
+                    brick.bloquear();
                     cambiarBitmapBrick(brick);
                     if (brick.getLife() == 0) {//Suma puntos solo si destruye el bloque
                         sumarPuntos(brick.getType());
+                        crearItemBrickDestruido(brick.getItem(),brick.getBrickX(),brick.getBrickY());
                         bricksCount--;
                         bloqueDestruido = true;
                     }
-                    velocity.setX(velocity.getX() + aceleration/2);
-                    velocity.setY((velocity.getY() + aceleration/2) * -1);
+                    //Cambiar velocidad de la pelota
+                    if(velocity.getX() > 0 && velocity.getY() > 0) {//positivo en eje X e Y
+                        if((brick.getBrickX() - ball.getBallX()) > 0 ){//Si esta mas cerca de el lateral izq que del brick que del superior
+                            velocity.setX((velocity.getX() + aceleration/2) * -1);
+                            velocity.setY((velocity.getY() + aceleration/2));
+                        }else{
+                            velocity.setX((velocity.getX() + aceleration/2) );
+                            velocity.setY((velocity.getY() + aceleration/2) * -1);
+                        }
+                    }else if(velocity.getX() > 0 && velocity.getY() < 0){//positivo en eje X , negativo en Y
+                            if ((brick.getBrickX() - ball.getBallX()) > 0){//Si esta mas cerca de el lateral izq que del brick que del inferior
+                                velocity.setX((velocity.getX() + aceleration/2) * -1);
+                                velocity.setY((velocity.getY() + aceleration/2));
+                            }else{
+                                velocity.setX((velocity.getX() + aceleration/2) );
+                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                            }
+                        }else if(velocity.getX() < 0 && velocity.getY() > 0){//negativo en eje X, positivo en Y
+                            if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0){//Si esta mas cerca de el lateral dere que del brick que del superior
+                                velocity.setX((velocity.getX() + aceleration/2) * -1);
+                                velocity.setY((velocity.getY() + aceleration/2));
+                            }else{
+                                velocity.setX((velocity.getX() + aceleration/2) );
+                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                            }
+                        }else if(velocity.getX() < 0 && velocity.getY() < 0){//negativo en eje X e Y
+                            if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0) {//Si esta mas cerca de el lateral dere que del brick que del inferior
+                                velocity.setX((velocity.getX() + aceleration/2) * -1);
+                                velocity.setY((velocity.getY() + aceleration/2));
+                            }else{
+                                velocity.setX((velocity.getX() + aceleration/2) );
+                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                            }
+                    }
+
 
                 }
             }
@@ -267,6 +321,86 @@ public class GameView extends View {
         }
 
     }
+
+    private void comprobarColisionesItem() {
+        Item item_a_borrar = null;
+        for (Item item : items) {
+            //si el item cae abajo y no choca con la pala
+            if (item.getItemY() > paddle.getPaddleY() + paddle.getPaddleHeight()) {
+                item_a_borrar = item;
+                //sonido
+                if (mpMiss != null && audioState) {
+                    mpMiss.start();
+                }
+
+            }
+            //casos de contacto con la pala
+            if (((item.getItemX() + item.getItemWidth()) >= paddle.getPaddleX())
+                    && (item.getItemX() <= paddle.getPaddleX() + paddle.getPaddleWidth())
+                    && (item.getItemY() + item.getItemHeight() >= paddle.getPaddleY())
+                    && (item.getItemY()  <= paddle.getPaddleY() + paddle.getPaddleHeight())) {
+                if (mpHit != null && audioState) {//sonido
+                    mpHit.start();
+                }
+                item_a_borrar = item;
+                aplicarEfectoItem(item.getType());
+            }
+        }
+        //desaparece el item
+        if(item_a_borrar != null)
+            items.remove(item_a_borrar);
+
+    }
+
+    private void aplicarEfectoItem(int p_tipoItem) {
+        switch (p_tipoItem){
+            case 1://diamante
+                points += 10;
+                break;
+            case 2://vida
+                if(life < 3) life++;
+                break;
+            case 3://Mas velocidad
+                velocity.setY(velocity.getY()+30);
+                break;
+            case 4://Menos velocidad
+                if(velocity.getY() > 0) velocity.setY(10);
+                else velocity.setY(-10);
+                break;
+            case 5://Paddle mas grande
+                paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle_big));
+                break;
+            case 6://Paddle mas pequeño
+                paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle_small));
+                break;
+
+
+
+        }
+    }
+
+    /**
+     * Retorna un tipo de item aleatorio al crear el bloque
+     * @return
+     */
+    private int calcularItemAleatorio() {
+        int [] values = {0,0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0,0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0,0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         1, 2, 3, 4, 5, 6, 7, 8, 1, 1};
+        int index = random.nextInt(40);
+        return values[index];
+
+    }
+
+    private void crearItemBrickDestruido(int p_item_type, float p_x, float p_y) {
+        if(p_item_type > 0) {
+            Bitmap item_ = seleccionarBitmapSegunTipoItem(p_item_type);
+            items.add(new Item(p_x, p_y, item_, p_item_type));
+        }
+    }
+
+
 
     private void cambiarBitmapBrick(Brick brick) {
         switch (brick.getType()){
@@ -325,6 +459,11 @@ public class GameView extends View {
             velocity.setX(0);
             velocity.setY(0);
             life--;
+            //resetear items
+            items.clear();
+            //resetear tamaño del paddle
+            paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle));
+            //Comprobar condiciones d efin de partida
             if(life == 0 || bricksCount <= 0){
                 Intent intent = new Intent(context, GameOver.class);
                 intent.putExtra("points", points);
@@ -336,7 +475,7 @@ public class GameView extends View {
         if( ((ball.getBallX() + ball.getBallWidth()) >= paddle.getPaddleX())
             && (ball.getBallX() <=paddle.getPaddleX()+ paddle.getPaddleWidth())
             && (ball.getBallY() + ball.getBallHeight() >=paddle.getPaddleY())
-            && (ball.getBallY() + ball.getBallHeight() <=paddle.getPaddleY() + paddle.getPaddleHeight())){
+            && (ball.getBallY()  <=paddle.getPaddleY() + paddle.getPaddleHeight())){
                 if(mpHit != null && audioState){//sonido
                     mpHit.start();
                 }
@@ -413,6 +552,30 @@ public class GameView extends View {
                 return BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal01);
             default:
                 return BitmapFactory.decodeResource(getResources(), R.drawable.brick_box_01);
+        }
+
+    }
+
+    private Bitmap seleccionarBitmapSegunTipoItem(int p_tipoItem) {
+        switch (p_tipoItem){
+            case 1:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_01);
+            case 2:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_02);
+            case 3:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_03);
+            case 4:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_04);
+            case 5:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_05);
+            case 6:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_06);
+            case 7:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_07);
+            case 8:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_08);
+            default:
+                return BitmapFactory.decodeResource(getResources(), R.drawable.item_01);
         }
 
     }
