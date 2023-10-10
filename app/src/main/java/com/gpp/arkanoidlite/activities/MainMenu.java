@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 
+import com.gpp.arkanoidlite.Globales;
 import com.gpp.arkanoidlite.R;
 
 public class MainMenu extends AppCompatActivity {
@@ -23,6 +24,13 @@ public class MainMenu extends AppCompatActivity {
     }
 
     public void onActionStartGame(View view) {
+        Intent intent = new Intent(MainMenu.this, LevelMenuActivity.class);
+        startActivity(intent);
+
+    }
+
+    public void onActionInfiniteGame(View view) {
+        Globales.level = 0;
         Intent intent = new Intent(MainMenu.this, StartGame.class);
         startActivity(intent);
 

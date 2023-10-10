@@ -20,6 +20,7 @@
         android:onClick="onActionModoInfinito"
         android:drawableStart="@drawable/play"
         android:background="@drawable/buttonshape"
+        android:visibility="gone"
         android:gravity="center">
 
         <ImageView
@@ -64,6 +65,7 @@
         android:layout_marginEnd="15dp"
         android:onClick="onActionDificultad"
         android:background="@drawable/buttonshape"
+        android:visibility="gone"
         android:gravity="center">
 
         <ImageView

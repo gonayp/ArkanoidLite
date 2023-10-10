@@ -7,4 +7,6 @@
     <string name="btn_sound">Sound</string>
     <string name="btn_back">Back</string>
     <string name="btn_exit">Exit</string>
+    <string name="btn_infinite_game">Infinite Mode</string>
+    <string name="btn_level_game">Muestra el nivel de juego</string>
 </resources>

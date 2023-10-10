@@ -205,8 +205,16 @@ public class GameView extends View {
     }
 
     private void crearBricks() {
-        for (int i= 0; i < bricksCount; i++) {
-            crearNewBrick();
+        if(Globales.mapaInicial != null){
+            modoInfinito = false;
+            bricksCount = 0;
+            for (Brick brick : Globales.mapaInicial){
+                crearBricks(brick);
+            }
+        }else {
+            for (int i = 0; i < bricksCount; i++) {
+                crearNewBrick();
+            }
         }
     }
 
@@ -221,6 +229,22 @@ public class GameView extends View {
             y = random.nextInt(calculo);
         }
         bricks.add(new Brick(x, y, brick_,tipoBrick,tipoBrick,calcularItemAleatorio()));
+        brick_ = null;
+    }
+
+    private void crearBricks(Brick brick) {
+        int tipoBrick = brick.getType();
+        Bitmap originalBitmap =  seleccionarBitmapSegunTipoBrick(tipoBrick);
+        Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap brick_ = Bitmap.createScaledBitmap(mutableBitmap, 99, 99, true);
+        int x = ((int)brick.getBrickX())*brick_.getWidth();
+        int y = (int)brick.getBrickY()*brick_.getHeight();
+        if(!colicionesEntreBricks(x, y, brick_.getWidth(), brick_.getHeight())) {
+            bricks.add(new Brick(x, y, brick_, tipoBrick, tipoBrick, calcularItemAleatorio()));
+            bricksCount++;
+        }
+        brick_ = null;
+
     }
 
 
@@ -243,10 +267,10 @@ public class GameView extends View {
             return true;
         }
         for (Brick brick : bricks) {//recorremos los bloques ya existentes
-            if (((x + width) >= brick.getBrickX())
-                    && (x <= brick.getBrickX() + brick.getBrickWidth())
-                    && (y + height >= brick.getBrickY())
-                    && (y  <= brick.getBrickY() + brick.getBrickHeight())) {
+            if (((x + width) > brick.getBrickX())
+                    && (x < brick.getBrickX() + brick.getBrickWidth())
+                    && (y + height > brick.getBrickY())
+                    && (y  < brick.getBrickY() + brick.getBrickHeight())) {
                 return true;
             }
         }
@@ -254,7 +278,7 @@ public class GameView extends View {
     }
 
     private void comprobarColisionesBricks() {
-        boolean bloqueDestruido = false;
+        Brick bloqueDestruido = null;
 
         //casos de contacto con un brick
         for (Brick brick : bricks) {
@@ -274,40 +298,32 @@ public class GameView extends View {
                         sumarPuntos(brick.getType());
                         crearItemBrickDestruido(brick.getItem(),brick.getBrickX(),brick.getBrickY());
                         bricksCount--;
-                        bloqueDestruido = true;
+                        bloqueDestruido = brick;
                     }
                     //Cambiar velocidad de la pelota
                     if(velocity.getX() > 0 && velocity.getY() > 0) {//positivo en eje X e Y
                         if((brick.getBrickX() - ball.getBallX()) > 0 ){//Si esta mas cerca de el lateral izq que del brick que del superior
-                            velocity.setX((velocity.getX() + aceleration/2) * -1);
-                            velocity.setY((velocity.getY() + aceleration/2));
+                            reboteX();
                         }else{
-                            velocity.setX((velocity.getX() + aceleration/2) );
-                            velocity.setY((velocity.getY() + aceleration/2) * -1);
+                            reboteY();
                         }
                     }else if(velocity.getX() > 0 && velocity.getY() < 0){//positivo en eje X , negativo en Y
                             if ((brick.getBrickX() - ball.getBallX()) > 0){//Si esta mas cerca de el lateral izq que del brick que del inferior
-                                velocity.setX((velocity.getX() + aceleration/2) * -1);
-                                velocity.setY((velocity.getY() + aceleration/2));
+                                reboteX();
                             }else{
-                                velocity.setX((velocity.getX() + aceleration/2) );
-                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                                reboteY();
                             }
                         }else if(velocity.getX() < 0 && velocity.getY() > 0){//negativo en eje X, positivo en Y
                             if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0){//Si esta mas cerca de el lateral dere que del brick que del superior
-                                velocity.setX((velocity.getX() + aceleration/2) * -1);
-                                velocity.setY((velocity.getY() + aceleration/2));
+                                reboteX();
                             }else{
-                                velocity.setX((velocity.getX() + aceleration/2) );
-                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                                reboteY();
                             }
                         }else if(velocity.getX() < 0 && velocity.getY() < 0){//negativo en eje X e Y
                             if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0) {//Si esta mas cerca de el lateral dere que del brick que del inferior
-                                velocity.setX((velocity.getX() + aceleration/2) * -1);
-                                velocity.setY((velocity.getY() + aceleration/2));
+                                reboteX();
                             }else{
-                                velocity.setX((velocity.getX() + aceleration/2) );
-                                velocity.setY((velocity.getY() + aceleration/2) * -1);
+                                reboteY();
                             }
                     }
 
@@ -316,10 +332,22 @@ public class GameView extends View {
             }
         }
 
-        if(bloqueDestruido){
+        if(bloqueDestruido != null){
+            bricks.remove(bloqueDestruido);
+            bloqueDestruido = null;
             crearBrickModoInfinito();
         }
 
+    }
+
+    private void reboteY() {
+        velocity.setX((velocity.getX() ) );
+        velocity.setY((velocity.getY() + aceleration/2) * -1);
+    }
+
+    private void reboteX() {
+        velocity.setX((velocity.getX()) * -1);
+        velocity.setY((velocity.getY() + aceleration/2));
     }
 
     private void comprobarColisionesItem() {
@@ -479,25 +507,32 @@ public class GameView extends View {
                 if(mpHit != null && audioState){//sonido
                     mpHit.start();
                 }
-                velocity.setX(xVelocity());
+                //Cambiamos la velocidad de la pala en x y invertimos la de Y
+                velocity.setX(xVelocity(velocity.getX()));
                 velocity.setY((velocity.getY() + aceleration) * -1);
                 //points++;
-            if( bricksCount <= 0){
-                Intent intent = new Intent(context, GameOver.class);
-                intent.putExtra("points", points);
-                context.startActivity(intent);
-                ((Activity) context).finish();
+                if( bricksCount <= 0){
+                    Intent intent = new Intent(context, GameOver.class);
+                    intent.putExtra("points", points);
+                    context.startActivity(intent);
+                    ((Activity) context).finish();
+                }
             }
-        }
 
 
     }
 
     private void comprobarColisionesLaterales() {
-        if(ball.getBallX() + ball.getBallWidth() >= dWidth -ball.getBallWidth() || ball.getBallX() <= 0){//si la pelota rebota de los lados
+        if(ball.getBallX() + ball.getBallWidth() >= dWidth-1 ){//si la pelota rebota del lado derecho
+            ball.setBallX(dWidth - ball.getBallWidth()+1);
             velocity.setX(velocity.getX()*-1);//cambiar direccion de la pelota
         }
-        if(ball.getBallY() + ball.getBallHeight() <= 0){//Si la pelota rebota arriba
+        if( ball.getBallX() <= 0){//si la pelota rebota del lado izquierdo
+            ball.setBallX(1);
+            velocity.setX(velocity.getX()*-1);//cambiar direccion de la pelota
+        }
+        if(ball.getBallY() - ball.getBallHeight() <= 0){//Si la pelota rebota arriba
+            ball.setBallY(ball.getBallHeight()+1);
             velocity.setY(velocity.getY() *-1);//cambiar direccion de la pelota
         }
     }
@@ -582,9 +617,12 @@ public class GameView extends View {
 
 
     //Metodo para devolver uno de los posibles resultados de velocidad
-    private int xVelocity() {
-        int [] values = {-40,-35, -30, -25, -20, 20, 25, 30, 35, 40};
-        int index = random.nextInt(10);
-        return values[index];
+    private int xVelocity(int p_x_previus) {
+        int [] values_positive = { 20, 25, 30, 35, 40};
+        int [] values_negative = {-40,-35, -30, -25, -20};
+        int index = random.nextInt(5);
+        if(p_x_previus > 0)
+            return values_negative[index];
+        return values_positive[index];
     }
 }
