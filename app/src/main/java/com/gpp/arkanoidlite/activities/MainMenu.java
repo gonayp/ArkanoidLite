@@ -31,6 +31,7 @@ public class MainMenu extends AppCompatActivity {
 
     public void onActionInfiniteGame(View view) {
         Globales.level = 0;
+        Globales.mapaInicial = null;
         Intent intent = new Intent(MainMenu.this, StartGame.class);
         startActivity(intent);
 

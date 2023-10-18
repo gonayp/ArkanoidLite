@@ -33,7 +33,7 @@ public class GameView extends View {
 
     int bricksCount = 10;
 
-    int aceleration = 5;
+    int aceleration = 4;
     int velocidadInicialX =25, velocidadInicialY=-25;
     Velocity velocity = new Velocity(0,0);
     Handler handler;
@@ -96,7 +96,10 @@ public class GameView extends View {
         dHeight = size.y;
 
         //Inicializar paddle
-        Bitmap paddle_ = BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
+        Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
+        Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 30, true);
+        //Bitmap paddle_ = BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
         posicionInicialX = dWidth/2 - paddle_.getWidth() / 2;
         posicionInicialY = (dHeight *4)/5;
         paddle = new Paddle(posicionInicialX,
@@ -104,9 +107,12 @@ public class GameView extends View {
                 paddle_);
         //Inicializar ball
         random = new Random();
-        Bitmap ball_ = BitmapFactory.decodeResource(getResources(),R.drawable.ball);
+        originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.ball);
+        mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap ball_ = Bitmap.createScaledBitmap(mutableBitmap, 30, 30, true);
+        //Bitmap ball_ = BitmapFactory.decodeResource(getResources(),R.drawable.ball);
         ball = new Ball(posicionInicialX + paddle.getPaddleWidth() / 3,
-                paddle.getPaddleY() - paddle.getPaddleHeight() ,
+                paddle.getPaddleY() - paddle.getPaddleHeight() - 5 ,
                 ball_);
 
         //Inicializar bricks
@@ -220,7 +226,9 @@ public class GameView extends View {
 
     private void crearNewBrick() {
         int tipoBrick = calcularTipoBrickAleatorioSegunDificultad();
-        Bitmap brick_ = seleccionarBitmapSegunTipoBrick(tipoBrick);
+        Bitmap originalBitmap =  seleccionarBitmapSegunTipoBrick(tipoBrick);
+        Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap brick_ = Bitmap.createScaledBitmap(mutableBitmap, 99, 99, true);
         int x = random.nextInt(dWidth)+2;
         int calculo = (int) (paddle.getPaddleY() -( dHeight -paddle.getPaddleY()));
         int y = random.nextInt(calculo);
@@ -381,6 +389,7 @@ public class GameView extends View {
     }
 
     private void aplicarEfectoItem(int p_tipoItem) {
+
         switch (p_tipoItem){
             case 1://diamante
                 points += 10;
@@ -389,17 +398,26 @@ public class GameView extends View {
                 if(life < 3) life++;
                 break;
             case 3://Mas velocidad
-                velocity.setY(velocity.getY()+30);
+                if(velocity.getY() > 0) velocity.setY(50);
+                else velocity.setY(-50);
                 break;
             case 4://Menos velocidad
-                if(velocity.getY() > 0) velocity.setY(10);
-                else velocity.setY(-10);
+                if(velocity.getY() > 0) velocity.setY(15);
+                else velocity.setY(-15);
+                if(velocity.getX() > 0) velocity.setX(15);
+                else velocity.setX(-15);
                 break;
             case 5://Paddle mas grande
-                paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle_big));
+                Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle_big);
+                Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 350, 30, true);
+                paddle.setPaddle(paddle_);
                 break;
             case 6://Paddle mas pequeño
-                paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle_small));
+                Bitmap originalBitmap_ =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle_small);
+                Bitmap mutableBitmap_ = originalBitmap_.copy(Bitmap.Config.ARGB_8888, true);
+                Bitmap paddle__ = Bitmap.createScaledBitmap(mutableBitmap_, 100, 30, true);
+                paddle.setPaddle(paddle__);
                 break;
 
 
@@ -431,44 +449,43 @@ public class GameView extends View {
 
 
     private void cambiarBitmapBrick(Brick brick) {
+        Bitmap originalBitmap = null;
+
         switch (brick.getType()){
             case 2:
                 if(brick.getLife() <= brick.getType()/2)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_sand02));
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_04);
                 break;
             case 3:
-                if(brick.getLife() == 2)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt02));
-                if(brick.getLife() == 1)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt03));
+                if(brick.getLife() <= brick.getType()/2)
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_06);
                 break;
             case 4:
                 if(brick.getLife() <= brick.getType()/2)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_hard02));
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_08);
                 break;
             case 5:
-                if(brick.getLife() == 3)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice02));
-                if(brick.getLife() == 1)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice03));
+                if(brick.getLife() <= brick.getType()/2)
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_10);
                 break;
             case 6:
                 if(brick.getLife() <= brick.getType()/2)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_rock02));
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_12);
                 break;
             case 7:
-                if(brick.getLife() == 5)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco02));
-                if(brick.getLife() == 2)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco03));
+                if(brick.getLife() <= brick.getType()/2)
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_14);
                 break;
             case 8:
-                if(brick.getLife() == 6)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal02));
-                if(brick.getLife() == 3)
-                    brick.setBrick(BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal03));
+                if(brick.getLife() <= brick.getType()/2)
+                    originalBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.brick_16);
                 break;
 
+        }
+        if(originalBitmap != null) {
+            Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            Bitmap brick_ = Bitmap.createScaledBitmap(mutableBitmap, 99, 99, true);
+            brick.setBrick(brick_);
         }
     }
 
@@ -490,7 +507,10 @@ public class GameView extends View {
             //resetear items
             items.clear();
             //resetear tamaño del paddle
-            paddle.setPaddle(BitmapFactory.decodeResource(getResources(), R.drawable.paddle));
+            Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
+            Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 30, true);
+            paddle.setPaddle(paddle_);
             //Comprobar condiciones d efin de partida
             if(life == 0 || bricksCount <= 0){
                 Intent intent = new Intent(context, GameOver.class);
@@ -570,23 +590,23 @@ public class GameView extends View {
     private Bitmap seleccionarBitmapSegunTipoBrick(int p_tipoBrick) {
         switch (p_tipoBrick){
             case 1:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_box_01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_01);
             case 2:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_sand01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_03);
             case 3:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_dirt01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_05);
             case 4:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_hard01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_07);
             case 5:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_ice01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_09);
             case 6:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_rock01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_11);
             case 7:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_choco01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_13);
             case 8:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_metal01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_15);
             default:
-                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_box_01);
+                return BitmapFactory.decodeResource(getResources(), R.drawable.brick_17);
         }
 
     }
@@ -618,8 +638,8 @@ public class GameView extends View {
 
     //Metodo para devolver uno de los posibles resultados de velocidad
     private int xVelocity(int p_x_previus) {
-        int [] values_positive = { 20, 25, 30, 35, 40};
-        int [] values_negative = {-40,-35, -30, -25, -20};
+        int [] values_positive = {15, 20, 25, 30, 35};
+        int [] values_negative = {-35, -30, -25, -20, -15};
         int index = random.nextInt(5);
         if(p_x_previus > 0)
             return values_negative[index];
