@@ -54,6 +54,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level02"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -61,7 +62,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel2"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -95,6 +96,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level03"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -102,7 +104,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel3"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -136,6 +138,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level04"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -143,7 +146,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel4"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -177,6 +180,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level05"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -184,7 +188,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel5"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -218,6 +222,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level06"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -225,7 +230,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel6"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -259,6 +264,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level07"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -266,7 +272,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel7"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -300,6 +306,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level08"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -307,7 +314,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel8"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -341,6 +348,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level09"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -348,7 +356,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel9"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView
@@ -382,6 +390,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_level10"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -389,7 +398,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
         android:onClick="onActionStartGameLevel10"
-        android:background="@drawable/buttonshape"
+        android:background="@drawable/buttonshape_disable"
         android:gravity="center">
 
         <ImageView

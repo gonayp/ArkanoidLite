@@ -89,6 +89,17 @@
             </TableRow>
 
         </TableLayout>
+
+        <ImageButton
+            android:id="@+id/btn_next_level"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/play"
+            android:onClick="nextLevel"
+            android:visibility="gone"
+            android:layout_marginEnd="10dp"
+            android:layout_marginTop="10dp"
+            android:contentDescription="@string/btn_next"/>
         <View
             android:layout_width="1dp"
             android:layout_height="80dp" />

@@ -9,4 +9,5 @@
     <string name="btn_exit">Exit</string>
     <string name="btn_infinite_game">Infinite Mode</string>
     <string name="btn_level_game">Muestra el nivel de juego</string>
+    <string name="btn_next">Next level</string>
 </resources>

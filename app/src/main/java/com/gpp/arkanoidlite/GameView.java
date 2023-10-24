@@ -34,8 +34,6 @@ public class GameView extends View {
     int bricksCount = 10;
 
     int aceleration = 4;
-    int velocidadInicialX =25, velocidadInicialY=-25;
-    Velocity velocity = new Velocity(0,0);
     Handler handler;
     final long UPDATE_MILLIS = 30;
     Runnable runnable;
@@ -55,7 +53,8 @@ public class GameView extends View {
 
     Paddle paddle;
 
-    Ball ball;
+    Ball ball_principal;
+    List<Ball> extra_balls = new ArrayList<Ball>();
 
     int posicionInicialX, posicionInicialY;
 
@@ -65,6 +64,10 @@ public class GameView extends View {
     int dificultad = 1;
 
     boolean modoInfinito = true;
+
+    boolean barrera_activa = false;
+
+    Bitmap barrera;
 
 
 
@@ -98,7 +101,7 @@ public class GameView extends View {
         //Inicializar paddle
         Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
         Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
-        Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 30, true);
+        Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 35, true);
         //Bitmap paddle_ = BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
         posicionInicialX = dWidth/2 - paddle_.getWidth() / 2;
         posicionInicialY = (dHeight *4)/5;
@@ -107,16 +110,22 @@ public class GameView extends View {
                 paddle_);
         //Inicializar ball
         random = new Random();
-        originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.ball);
+        originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.ball_red);
         mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
         Bitmap ball_ = Bitmap.createScaledBitmap(mutableBitmap, 30, 30, true);
-        //Bitmap ball_ = BitmapFactory.decodeResource(getResources(),R.drawable.ball);
-        ball = new Ball(posicionInicialX + paddle.getPaddleWidth() / 3,
+        ball_principal = new Ball(posicionInicialX + paddle.getPaddleWidth() / 3,
                 paddle.getPaddleY() - paddle.getPaddleHeight() - 5 ,
                 ball_);
 
         //Inicializar bricks
         crearBricks();
+        //Inicializar extra balls
+        crearExtraBalls();
+
+        //Inicializar barrera
+        originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.barrera);
+        mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        barrera = Bitmap.createScaledBitmap(mutableBitmap, dWidth, 10, true);
 
 
         handler = new Handler();
@@ -126,28 +135,33 @@ public class GameView extends View {
     }
 
 
-
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         //cambiar color de fondo
         canvas.drawColor(Color.BLACK);
         //Añadir componente de velocidad a la pelota
-        ball.incrementarX(velocity.getX());
-        ball.incrementarY(velocity.getY());
+        ball_principal.aplicarVelocidad();
+        //Añadir componente de velocidad a las pelotas extra
+        for (Ball ball: extra_balls){
+            if(ball.isExiste()) ball.aplicarVelocidad();
+        }
         //Añadir componente de velocidad a los items en pantalla
         for (Item item : items) {
             item.incrementarY(10);
         }
         //Comprobar coliciones
-        comprobarColisionesLaterales();
-        comprobarColisionesInferiores();
-        comprobarColisionesBricks();
+        comprobarColisionesLaterales(ball_principal);
+        comprobarColisionesBarreraInferior(ball_principal);
+        comprobarColisionesInferiores(ball_principal);
+        comprobarColisionesConLaPala(ball_principal);
+        comprobarColisionesBricks(ball_principal);
         comprobarColisionesItem();
+        //Comprobar coliciones de pelotas extra
+        comprobarColisionesExtraBalls();
 
         //Pintar elementos
-        //canvas.drawBitmap(BitmapFactory.decodeResource(getResources(),R.drawable.restart), dWidth, dHeight, null);
-        canvas.drawBitmap(ball.getBall(), ball.getBallX(), ball.getBallY(), null);
+        canvas.drawBitmap(ball_principal.getBall(), ball_principal.getBallX(), ball_principal.getBallY(), null);
         canvas.drawBitmap(paddle.getPaddle(), paddle.getPaddleX(),paddle.getPaddleY(), null);
         for (Brick brick : bricks) {
             if(brick.getLife() > 0) {
@@ -157,7 +171,13 @@ public class GameView extends View {
         for (Item item : items) {
             canvas.drawBitmap(item.getItem(), item.getItemX(), item.getItemY(), null);
         }
+        for (Ball ball : extra_balls) {
+            if(ball.isExiste())
+                canvas.drawBitmap(ball.getBall(), ball.getBallX(), ball.getBallY(), null);
+        }
         canvas.drawText("Puntos: "+points, 20,dHeight-TEXT_SIZE, textPaint);
+        if(barrera_activa)
+            canvas.drawBitmap(barrera,0, dHeight - TEXT_SIZE*3,null);
 
         if(life == 2){
             healthPaint.setColor(Color.YELLOW);
@@ -178,7 +198,6 @@ public class GameView extends View {
 
 
 
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float touchX = event.getX();
@@ -186,8 +205,8 @@ public class GameView extends View {
         if(touchY >=paddle.getPaddleY()){
             int action = event.getAction();
             if(action == MotionEvent.ACTION_DOWN){
-                if(velocity.getX() == 0) {//Si todavia no se movio la pelota la movemos junto con la pal
-                    velocity = new Velocity(velocidadInicialX, velocidadInicialY);//aplicar velocidad inicial si se hace click
+                if(ball_principal.getVelocidadX() == 0) {//Si todavia no se movio la pelota la movemos junto con la pal
+                    ball_principal.aplicarVelocidadInicial();
                 }
                 oldX = event.getX();
                 paddle.setOldPaddleX(paddle.getPaddleX());
@@ -202,8 +221,8 @@ public class GameView extends View {
                 }else{
                    paddle.setPaddleX(newPaddleX);
                 }
-                if(velocity.getX() == 0){//Si todavia no se movio la pelota la movemos junto con la pal
-                    ball.setBallX(paddle.getPaddleX() + paddle.getPaddleWidth() / 2);
+                if(ball_principal.getVelocidadX() == 0){//Si todavia no se movio la pelota la movemos junto con la pala
+                    ball_principal.setBallX(paddle.getPaddleX() + paddle.getPaddleWidth() / 2);
                 }
             }
         }
@@ -221,6 +240,19 @@ public class GameView extends View {
             for (int i = 0; i < bricksCount; i++) {
                 crearNewBrick();
             }
+        }
+    }
+
+    private void crearExtraBalls() {
+
+        for (int i=0; i <10; i++) {
+            Bitmap originalBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ball_extra);
+            Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            Bitmap ball_ = Bitmap.createScaledBitmap(mutableBitmap, 30, 30, true);
+            int x = dWidth/2;
+            int y = (int) paddle.getPaddleY() - ball_.getHeight() - 5;
+            extra_balls.add(new Ball(x, y, ball_));
+            ball_ = null;
         }
     }
 
@@ -285,139 +317,48 @@ public class GameView extends View {
         return false;
     }
 
-    private void comprobarColisionesBricks() {
-        Brick bloqueDestruido = null;
-
-        //casos de contacto con un brick
-        for (Brick brick : bricks) {
-            brick.desbloquear();
-            if(brick.getLife() > 0 && !brick.bloqueado()) {//Solo comprueba colision con bloques vivos y no bloqueados
-                if (((ball.getBallX() + ball.getBallWidth()) >= brick.getBrickX())
-                        && (ball.getBallX() <= brick.getBrickX() + brick.getBrickWidth())
-                        && (ball.getBallY() + ball.getBallHeight() >= brick.getBrickY())
-                        && (ball.getBallY()  <= brick.getBrickY() + brick.getBrickHeight())) {
-                    if (mpHit != null && audioState) {//sonido
-                        mpHit.start();
-                    }
-                    brick.reduceLife();
-                    brick.bloquear();
-                    cambiarBitmapBrick(brick);
-                    if (brick.getLife() == 0) {//Suma puntos solo si destruye el bloque
-                        sumarPuntos(brick.getType());
-                        crearItemBrickDestruido(brick.getItem(),brick.getBrickX(),brick.getBrickY());
-                        bricksCount--;
-                        bloqueDestruido = brick;
-                    }
-                    //Cambiar velocidad de la pelota
-                    if(velocity.getX() > 0 && velocity.getY() > 0) {//positivo en eje X e Y
-                        if((brick.getBrickX() - ball.getBallX()) > 0 ){//Si esta mas cerca de el lateral izq que del brick que del superior
-                            reboteX();
-                        }else{
-                            reboteY();
-                        }
-                    }else if(velocity.getX() > 0 && velocity.getY() < 0){//positivo en eje X , negativo en Y
-                            if ((brick.getBrickX() - ball.getBallX()) > 0){//Si esta mas cerca de el lateral izq que del brick que del inferior
-                                reboteX();
-                            }else{
-                                reboteY();
-                            }
-                        }else if(velocity.getX() < 0 && velocity.getY() > 0){//negativo en eje X, positivo en Y
-                            if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0){//Si esta mas cerca de el lateral dere que del brick que del superior
-                                reboteX();
-                            }else{
-                                reboteY();
-                            }
-                        }else if(velocity.getX() < 0 && velocity.getY() < 0){//negativo en eje X e Y
-                            if(((ball.getBallX() + ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0) {//Si esta mas cerca de el lateral dere que del brick que del inferior
-                                reboteX();
-                            }else{
-                                reboteY();
-                            }
-                    }
 
 
-                }
-            }
-        }
 
-        if(bloqueDestruido != null){
-            bricks.remove(bloqueDestruido);
-            bloqueDestruido = null;
-            crearBrickModoInfinito();
-        }
 
-    }
 
-    private void reboteY() {
-        velocity.setX((velocity.getX() ) );
-        velocity.setY((velocity.getY() + aceleration/2) * -1);
-    }
-
-    private void reboteX() {
-        velocity.setX((velocity.getX()) * -1);
-        velocity.setY((velocity.getY() + aceleration/2));
-    }
-
-    private void comprobarColisionesItem() {
-        Item item_a_borrar = null;
-        for (Item item : items) {
-            //si el item cae abajo y no choca con la pala
-            if (item.getItemY() > paddle.getPaddleY() + paddle.getPaddleHeight()) {
-                item_a_borrar = item;
-                //sonido
-                if (mpMiss != null && audioState) {
-                    mpMiss.start();
-                }
-
-            }
-            //casos de contacto con la pala
-            if (((item.getItemX() + item.getItemWidth()) >= paddle.getPaddleX())
-                    && (item.getItemX() <= paddle.getPaddleX() + paddle.getPaddleWidth())
-                    && (item.getItemY() + item.getItemHeight() >= paddle.getPaddleY())
-                    && (item.getItemY()  <= paddle.getPaddleY() + paddle.getPaddleHeight())) {
-                if (mpHit != null && audioState) {//sonido
-                    mpHit.start();
-                }
-                item_a_borrar = item;
-                aplicarEfectoItem(item.getType());
-            }
-        }
-        //desaparece el item
-        if(item_a_borrar != null)
-            items.remove(item_a_borrar);
-
-    }
 
     private void aplicarEfectoItem(int p_tipoItem) {
 
         switch (p_tipoItem){
             case 1://diamante
-                points += 10;
+                points += 50;
                 break;
             case 2://vida
                 if(life < 3) life++;
                 break;
             case 3://Mas velocidad
-                if(velocity.getY() > 0) velocity.setY(50);
-                else velocity.setY(-50);
+                if(ball_principal.getVelocidadY() > 0) ball_principal.setVelocidadY(50);
+                else ball_principal.setVelocidadY(-50);
                 break;
             case 4://Menos velocidad
-                if(velocity.getY() > 0) velocity.setY(15);
-                else velocity.setY(-15);
-                if(velocity.getX() > 0) velocity.setX(15);
-                else velocity.setX(-15);
+                if(ball_principal.getVelocidadY() > 0) ball_principal.setVelocidadY(15);
+                else ball_principal.setVelocidadY(-15);
+                if(ball_principal.getVelocidadX() > 0) ball_principal.setVelocidadX(15);
+                else ball_principal.setVelocidadX(-15);
                 break;
             case 5://Paddle mas grande
                 Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle_big);
                 Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
-                Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 350, 30, true);
+                Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 350, 35, true);
                 paddle.setPaddle(paddle_);
                 break;
             case 6://Paddle mas pequeño
                 Bitmap originalBitmap_ =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle_small);
                 Bitmap mutableBitmap_ = originalBitmap_.copy(Bitmap.Config.ARGB_8888, true);
-                Bitmap paddle__ = Bitmap.createScaledBitmap(mutableBitmap_, 100, 30, true);
+                Bitmap paddle__ = Bitmap.createScaledBitmap(mutableBitmap_, 100, 35, true);
                 paddle.setPaddle(paddle__);
+                break;
+            case 7://mas pelotas
+                createNewBalls();
+                break;
+            case 8://Fondo protegido
+                barrera_activa = true;
                 break;
 
 
@@ -425,24 +366,32 @@ public class GameView extends View {
         }
     }
 
-    /**
-     * Retorna un tipo de item aleatorio al crear el bloque
-     * @return
-     */
-    private int calcularItemAleatorio() {
-        int [] values = {0,0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         0,0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         0,0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         1, 2, 3, 4, 5, 6, 7, 8, 1, 1};
-        int index = random.nextInt(40);
-        return values[index];
-
+    private void createNewBalls() {
+        for(Ball ball: extra_balls){
+            if(!ball.isExiste()){
+                ball.setExiste(true);
+                ball.setBallX(dWidth/2);
+                ball.setBallY((int) paddle.getPaddleY() - ball.getBallHeight() - 5);
+                ball.aplicarVelocidadInicial();
+                ball.setVelocidadX(xVelocityAny());
+                break;
+            }
+        }
     }
 
+
+
     private void crearItemBrickDestruido(int p_item_type, float p_x, float p_y) {
+        Bitmap originalBitmap = seleccionarBitmapSegunTipoItem(p_item_type);
         if(p_item_type > 0) {
-            Bitmap item_ = seleccionarBitmapSegunTipoItem(p_item_type);
-            items.add(new Item(p_x, p_y, item_, p_item_type));
+            if(p_item_type != 2){
+                Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                Bitmap item_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 45, true);
+                items.add(new Item(p_x, p_y, item_, p_item_type));
+            }else{
+                items.add(new Item(p_x, p_y, originalBitmap, p_item_type));
+            }
+
         }
     }
 
@@ -490,93 +439,30 @@ public class GameView extends View {
     }
 
 
-    private void comprobarColisionesInferiores() {
-        //si la pelota cae abajo y no choca con la pala
-        if(ball.getBallY() >paddle.getPaddleY() + paddle.getPaddleHeight()){
-            //reiniciar posicion de la bola
-            ball.setBallX(paddle.getPaddleX() + paddle.getPaddleWidth() / 3);
-            ball.setBallY(paddle.getPaddleY() - paddle.getPaddleHeight() - ball.getBallHeight()/3);
-            //sonido
-            if(mpMiss != null && audioState){
-                mpMiss.start();
-            }
-            //resetear velocidad
-            velocity.setX(0);
-            velocity.setY(0);
-            life--;
-            //resetear items
-            items.clear();
-            //resetear tamaño del paddle
-            Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
-            Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
-            Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 30, true);
-            paddle.setPaddle(paddle_);
-            //Comprobar condiciones d efin de partida
-            if(life == 0 || bricksCount <= 0){
-                Intent intent = new Intent(context, GameOver.class);
-                intent.putExtra("points", points);
-                context.startActivity(intent);
-                ((Activity) context).finish();
-            }
-        }
-        //casos de contacto con la pala
-        if( ((ball.getBallX() + ball.getBallWidth()) >= paddle.getPaddleX())
-            && (ball.getBallX() <=paddle.getPaddleX()+ paddle.getPaddleWidth())
-            && (ball.getBallY() + ball.getBallHeight() >=paddle.getPaddleY())
-            && (ball.getBallY()  <=paddle.getPaddleY() + paddle.getPaddleHeight())){
-                if(mpHit != null && audioState){//sonido
-                    mpHit.start();
-                }
-                //Cambiamos la velocidad de la pala en x y invertimos la de Y
-                velocity.setX(xVelocity(velocity.getX()));
-                velocity.setY((velocity.getY() + aceleration) * -1);
-                //points++;
-                if( bricksCount <= 0){
-                    Intent intent = new Intent(context, GameOver.class);
-                    intent.putExtra("points", points);
-                    context.startActivity(intent);
-                    ((Activity) context).finish();
-                }
-            }
 
 
-    }
 
-    private void comprobarColisionesLaterales() {
-        if(ball.getBallX() + ball.getBallWidth() >= dWidth-1 ){//si la pelota rebota del lado derecho
-            ball.setBallX(dWidth - ball.getBallWidth()+1);
-            velocity.setX(velocity.getX()*-1);//cambiar direccion de la pelota
-        }
-        if( ball.getBallX() <= 0){//si la pelota rebota del lado izquierdo
-            ball.setBallX(1);
-            velocity.setX(velocity.getX()*-1);//cambiar direccion de la pelota
-        }
-        if(ball.getBallY() - ball.getBallHeight() <= 0){//Si la pelota rebota arriba
-            ball.setBallY(ball.getBallHeight()+1);
-            velocity.setY(velocity.getY() *-1);//cambiar direccion de la pelota
-        }
-    }
 
     private void sumarPuntos(int tipo_brick) {
-        points += tipo_brick;
+        points += tipo_brick * 10;
         if(modoInfinito){
             calcularDificultad();
         }
     }
 
     private void calcularDificultad() {
-        if(points > 10) dificultad = 1;
-        if(points > 20) dificultad = 2;
-        if(points > 40) dificultad = 3;
-        if(points > 60) dificultad = 4;
-        if(points > 100) dificultad = 5;
+        if(points > 50) dificultad = 1;
+        if(points > 550) dificultad = 2;
+        if(points > 2000) dificultad = 3;
+        if(points > 5000) dificultad = 4;
+        if(points > 10000) dificultad = 5;
     }
 
     private void crearBrickModoInfinito() {
         if(modoInfinito){
             crearNewBrick();
             bricksCount++;
-            if(dificultad > 5) {
+            if(dificultad > 4) {
                 crearNewBrick();
                 bricksCount++;
                 if(dificultad > 7){
@@ -635,6 +521,249 @@ public class GameView extends View {
 
     }
 
+    private void eliminarExtraBalls() {
+        for(Ball ball: extra_balls){
+            ball.setExiste(false);
+        }
+    }
+
+    private void comprobarColisionesLaterales(Ball p_ball) {
+        if(p_ball.getBallX() + p_ball.getBallWidth() >= dWidth-1 ){//si la pelota rebota del lado derecho
+            p_ball.setBallX(dWidth - p_ball.getBallWidth()+1);
+            p_ball.setVelocidadX(p_ball.getVelocidadX()*-1);//cambiar direccion de la pelota
+        }
+        if( p_ball.getBallX() <= 0){//si la pelota rebota del lado izquierdo
+            p_ball.setBallX(1);
+            p_ball.setVelocidadX(p_ball.getVelocidadX()*-1);//cambiar direccion de la pelota
+        }
+        if(p_ball.getBallY() - p_ball.getBallHeight() <= 0){//Si la pelota rebota arriba
+            p_ball.setBallY(p_ball.getBallHeight()+1);
+            p_ball.setVelocidadY(p_ball.getVelocidadY() *-1);//cambiar direccion de la pelota
+        }
+    }
+
+    //si la pelota cae abajo, no choca con la pala y la barrera esta activa
+    private void comprobarColisionesBarreraInferior(Ball p_ball){
+
+        if(barrera_activa && p_ball.getBallY() >=  dHeight-TEXT_SIZE*3){
+            if(mpHit != null && audioState){//sonido
+                mpHit.start();
+            }
+            //Cambiamos la velocidad de la pala en x y invertimos la de Y
+            p_ball.setVelocidadX(xVelocity(p_ball.getVelocidadX()));
+            p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration) * -1);
+            barrera_activa = false;//desactivamos la barrera
+            if( bricksCount <= 0){
+                Intent intent = new Intent(context, GameOver.class);
+                intent.putExtra("points", points);
+                context.startActivity(intent);
+                ((Activity) context).finish();
+            }
+        }
+    }
+
+    //casos de contacto con la pala
+    private void comprobarColisionesConLaPala(Ball p_ball){
+
+        if( ((p_ball.getBallX() + p_ball.getBallWidth()) >= paddle.getPaddleX())
+                && (p_ball.getBallX() <=paddle.getPaddleX()+ paddle.getPaddleWidth())
+                && (p_ball.getBallY() + p_ball.getBallHeight() >=paddle.getPaddleY())
+                && (p_ball.getBallY()  <=paddle.getPaddleY() + paddle.getPaddleHeight())){
+            if(mpHit != null && audioState){//sonido
+                mpHit.start();
+            }
+            //Cambiamos la velocidad de la pala en x y invertimos la de Y
+            p_ball.setVelocidadX(xVelocity(p_ball.getVelocidadX()));
+            p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration) * -1);
+            //points++;
+
+            comprobarCondicionesFinDePartida();
+
+        }
+    }
+
+    //si la pelota cae abajo y no choca con la pala
+    private void comprobarColisionesInferiores(Ball p_ball) {
+
+        if(p_ball.getBallY() > dHeight - p_ball.getBallHeight()){
+            //reiniciar posicion de la bola
+            p_ball.setBallX(paddle.getPaddleX() + paddle.getPaddleWidth() / 3);
+            p_ball.setBallY(paddle.getPaddleY() - paddle.getPaddleHeight() - p_ball.getBallHeight()/3);
+            //sonido
+            if(mpMiss != null && audioState){
+                mpMiss.start();
+            }
+            //resetear velocidad
+            p_ball.setVelocidadX(0);
+            p_ball.setVelocidadY(0);
+            life--;
+            //resetear items
+            items.clear();
+            //resetear tamaño del paddle
+            Bitmap originalBitmap =  BitmapFactory.decodeResource(getResources(),R.drawable.paddle);
+            Bitmap mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+            Bitmap paddle_ = Bitmap.createScaledBitmap(mutableBitmap, 200, 35, true);
+            paddle.setPaddle(paddle_);
+            paddle_ = null;
+
+            eliminarExtraBalls();
+
+            comprobarCondicionesFinDePartida();
+        }
+
+    }
+
+
+
+
+    private void comprobarColisionesInferioresExtraBall(Ball p_ball) {
+
+        //si la pelota cae abajo y no choca con la pala
+        if(p_ball.getBallY() > dHeight - p_ball.getBallHeight()){
+            //eliminamos pelota
+            p_ball.setExiste(false);
+            //sonido
+            if(mpMiss != null && audioState){
+                mpMiss.start();
+            }
+            //resetear velocidad
+            p_ball.aplicarVelocidadInicial();
+            p_ball.setBallX(dWidth/2);
+            p_ball.setBallY((int) paddle.getPaddleY() - p_ball.getBallHeight()- 5);
+
+        }
+
+    }
+
+
+    private void comprobarColisionesBricks(Ball p_ball) {
+        Brick bloqueDestruido = null;
+
+        //casos de contacto con un brick
+        for (Brick brick : bricks) {
+            brick.desbloquear();
+            if(brick.getLife() > 0 && !brick.bloqueado()) {//Solo comprueba colision con bloques vivos y no bloqueados
+                if (((p_ball.getBallX() + p_ball.getBallWidth()) >= brick.getBrickX())
+                        && (p_ball.getBallX() <= brick.getBrickX() + brick.getBrickWidth())
+                        && (p_ball.getBallY() + p_ball.getBallHeight() >= brick.getBrickY())
+                        && (p_ball.getBallY()  <= brick.getBrickY() + brick.getBrickHeight())) {
+                    if (mpHit != null && audioState) {//sonido
+                        mpHit.start();
+                    }
+                    brick.reduceLife();
+                    brick.bloquear();
+                    cambiarBitmapBrick(brick);
+                    if (brick.getLife() == 0) {//Suma puntos solo si destruye el bloque
+                        sumarPuntos(brick.getType());
+                        crearItemBrickDestruido(brick.getItem(),brick.getBrickX(),brick.getBrickY());
+                        bricksCount--;
+                        bloqueDestruido = brick;
+                    }
+                    //Cambiar velocidad de la pelota
+                    if(p_ball.getVelocidadX() > 0 && p_ball.getVelocidadY() > 0) {//positivo en eje X e Y
+                        if((brick.getBrickX() - p_ball.getBallX()) > 0 ){//Si esta mas cerca de el lateral izq que del brick que del superior
+                            reboteX(p_ball);
+                        }else{
+                            reboteY(p_ball);
+                        }
+                    }else if(p_ball.getVelocidadX() > 0 && p_ball.getVelocidadY() < 0){//positivo en eje X , negativo en Y
+                        if ((brick.getBrickX() - p_ball.getBallX()) > 0){//Si esta mas cerca de el lateral izq que del brick que del inferior
+                            reboteX(p_ball);
+                        }else{
+                            reboteY(p_ball);
+                        }
+                    }else if(p_ball.getVelocidadX() < 0 && p_ball.getVelocidadY() > 0){//negativo en eje X, positivo en Y
+                        if(((p_ball.getBallX() + p_ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0){//Si esta mas cerca de el lateral dere que del brick que del superior
+                            reboteX(p_ball);
+                        }else{
+                            reboteY(p_ball);
+                        }
+                    }else if(p_ball.getVelocidadX() < 0 && p_ball.getVelocidadY() < 0){//negativo en eje X e Y
+                        if(((p_ball.getBallX() + p_ball.getBallWidth()) - (brick.getBrickX() + brick.getBrickWidth()) ) > 0) {//Si esta mas cerca de el lateral dere que del brick que del inferior
+                            reboteX(p_ball);
+                        }else{
+                            reboteY(p_ball);
+                        }
+                    }
+
+
+                }
+            }
+        }
+
+        if(bloqueDestruido != null){
+            bricks.remove(bloqueDestruido);
+            bloqueDestruido = null;
+            crearBrickModoInfinito();
+        }
+
+    }
+
+    private void comprobarColisionesItem() {
+        Item item_a_borrar = null;
+        for (Item item : items) {
+            //si el item cae abajo y no choca con la pala
+            if (item.getItemY() > dHeight-item.getItemHeight()) {
+                item_a_borrar = item;
+                //sonido
+                if (mpMiss != null && audioState) {
+                    mpMiss.start();
+                }
+
+            }
+            //casos de contacto con la pala
+            if (((item.getItemX() + item.getItemWidth()) >= paddle.getPaddleX())
+                    && (item.getItemX() <= paddle.getPaddleX() + paddle.getPaddleWidth())
+                    && (item.getItemY() + item.getItemHeight() >= paddle.getPaddleY())
+                    && (item.getItemY()  <= paddle.getPaddleY() + paddle.getPaddleHeight())) {
+                if (mpHit != null && audioState) {//sonido
+                    mpHit.start();
+                }
+                item_a_borrar = item;
+                aplicarEfectoItem(item.getType());
+            }
+        }
+        //desaparece el item
+        if(item_a_borrar != null)
+            items.remove(item_a_borrar);
+
+    }
+
+    private void comprobarColisionesExtraBalls() {
+        for(Ball ball: extra_balls){
+            if(ball.isExiste()){
+                comprobarColisionesLaterales(ball);
+                comprobarColisionesBarreraInferior(ball);
+                comprobarColisionesInferioresExtraBall(ball);
+                comprobarColisionesConLaPala(ball);
+                comprobarColisionesBricks(ball);
+            }
+        }
+
+    }
+
+    private void comprobarCondicionesFinDePartida() {
+        //Comprobar condiciones de fin de partida
+        if(life == 0 || bricksCount <= 0){
+            Intent intent = new Intent(context, GameOver.class);
+            intent.putExtra("points", points);
+            if(bricksCount <= 0) intent.putExtra("victoria",true);
+            context.startActivity(intent);
+            ((Activity) context).finish();
+        }
+    }
+
+
+    private void reboteY(Ball p_ball) {
+        p_ball.setVelocidadX((p_ball.getVelocidadX() ) );
+        p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration/2) * -1);
+    }
+
+    private void reboteX(Ball p_ball) {
+        p_ball.setVelocidadX((p_ball.getVelocidadX()) * -1);
+        p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration/2));
+    }
+
 
     //Metodo para devolver uno de los posibles resultados de velocidad
     private int xVelocity(int p_x_previus) {
@@ -644,5 +773,36 @@ public class GameView extends View {
         if(p_x_previus > 0)
             return values_negative[index];
         return values_positive[index];
+    }
+
+    private int xVelocityAny() {
+        int [] values = {15, 20, 25, 30, 35, -35, -30, -25, -20, -15};
+        int index = random.nextInt(10);
+
+        return values[index];
+    }
+
+
+    /**
+     * Retorna un tipo de item aleatorio al crear el bloque
+     * @return
+     */
+    private int calcularItemAleatorio() {
+        return 7;
+        /*int [] values =
+               {1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 2, 0, 0, 0, 0, 0, 8, 0, 0,
+                1, 2, 0, 4, 5, 0, 0, 8, 0, 0,
+                1, 2, 3, 4, 5, 6, 7, 8, 0, 0};
+
+        int index = random.nextInt(100);
+        return values[index];*/
+
     }
 }
