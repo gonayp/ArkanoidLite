@@ -176,8 +176,9 @@ public class GameView extends View {
                 canvas.drawBitmap(ball.getBall(), ball.getBallX(), ball.getBallY(), null);
         }
         canvas.drawText("Puntos: "+points, 20,dHeight-TEXT_SIZE, textPaint);
+        //canvas.drawText("Velocidad Y: "+ball_principal.getVelocidadY(), 20,dHeight-TEXT_SIZE*2, textPaint);
         if(barrera_activa)
-            canvas.drawBitmap(barrera,0, dHeight - TEXT_SIZE*3,null);
+            canvas.drawBitmap(barrera,0, paddle.getPaddleY()+paddle.getPaddleHeight(),null);
 
         if(life == 2){
             healthPaint.setColor(Color.YELLOW);
@@ -188,7 +189,7 @@ public class GameView extends View {
         }
 
         //Pintar las barra inferior segun la vida que quede
-        canvas.drawRect(dWidth-200, dHeight-TEXT_SIZE, dWidth -200 + 60 * life,dHeight , healthPaint);
+        canvas.drawRect(dWidth-200, dHeight-200, dWidth -200 + 60 * life,dHeight , healthPaint);
 
         //Rellamar al metodo onDraw para hacer el bucle de juego
         handler.postDelayed(runnable, UPDATE_MILLIS);
@@ -545,7 +546,7 @@ public class GameView extends View {
     //si la pelota cae abajo, no choca con la pala y la barrera esta activa
     private void comprobarColisionesBarreraInferior(Ball p_ball){
 
-        if(barrera_activa && p_ball.getBallY() >=  dHeight-TEXT_SIZE*3){
+        if(barrera_activa && p_ball.getBallY() >=  paddle.getPaddleY()+paddle.getPaddleHeight()){
             if(mpHit != null && audioState){//sonido
                 mpHit.start();
             }
@@ -575,7 +576,8 @@ public class GameView extends View {
             //Cambiamos la velocidad de la pala en x y invertimos la de Y
             p_ball.setVelocidadX(xVelocity(p_ball.getVelocidadX()));
             p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration) * -1);
-            //points++;
+
+            //TODO invertir eje x cuandop la pelota da en el borde del paddle
 
             comprobarCondicionesFinDePartida();
 
@@ -756,12 +758,16 @@ public class GameView extends View {
 
     private void reboteY(Ball p_ball) {
         p_ball.setVelocidadX((p_ball.getVelocidadX() ) );
-        p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration/2) * -1);
+        //int velocidad = p_ball.getVelocidadY() + aceleration/2;
+        //if(p_ball.getVelocidadY() < 0) velocidad = p_ball.getVelocidadY() - aceleration/2;
+        p_ball.setVelocidadY(p_ball.getVelocidadY() * -1);
     }
 
     private void reboteX(Ball p_ball) {
         p_ball.setVelocidadX((p_ball.getVelocidadX()) * -1);
-        p_ball.setVelocidadY((p_ball.getVelocidadY() + aceleration/2));
+        //int velocidad = p_ball.getVelocidadY() + aceleration/2;
+        //if(p_ball.getVelocidadY() < 0) velocidad = p_ball.getVelocidadY() - aceleration/2;
+        //p_ball.setVelocidadY(velocidad);
     }
 
 
@@ -788,8 +794,8 @@ public class GameView extends View {
      * @return
      */
     private int calcularItemAleatorio() {
-        return 7;
-        /*int [] values =
+
+        int [] values =
                {1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -802,7 +808,7 @@ public class GameView extends View {
                 1, 2, 3, 4, 5, 6, 7, 8, 0, 0};
 
         int index = random.nextInt(100);
-        return values[index];*/
+        return values[index];
 
     }
 }

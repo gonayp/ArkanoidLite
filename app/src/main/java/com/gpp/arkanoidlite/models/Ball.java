@@ -79,7 +79,8 @@ public class Ball {
 
 
     public void setVelocidadY(int i) {
-        velocity.setY(i);
+        if(i <= 60 && i >= -60)
+            velocity.setY(i);
     }
 
     public void setVelocidadX(int i) {
